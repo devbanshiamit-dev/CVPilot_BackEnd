@@ -1,0 +1,69 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Rider
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Uploaded files
+Uploads/
+uploads/
+
+# Temporary files
+Temp/
+temp/
+
+# Environment / local configuration
+.env
+.env.*
+!.env.example
+
+# User secrets
+appsettings.Local.json
+appsettings.Development.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+*.trx
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Coverage
+coverage/
+coverage.xml
+
+# Publish output
+publish/
+*.publishsettings
+
+# Database local files
+*.mdf
+*.ldf
+*.ndf
+
+# Backup files
+*.bak
+
+# Temporary ASP.NET files
+aspnet_client/
