@@ -3,6 +3,7 @@ using CVPilotAPI.DTO;
 using CVPilotAPI.Models;
 using CVPilotAPI.Repository;
 using CVPilotAPI.ResumeAnalyze;
+using CVPilotAPI.SuggestionRepository;
 using CVPilotAPI.TextExtractionEngine;
 
 namespace CVPilotAPI.ResumeService
@@ -13,16 +14,19 @@ namespace CVPilotAPI.ResumeService
         private readonly IResumeAnalyze _resumeAnalysisService;
         private readonly IResumeRepository _resumeRepository;
         private readonly IAnalysisRepository _analysisRepository;
+        private readonly ISuggestionRepository _suggestionRepository;
         public ResumeServices(
             IResumeParserService resumeParserService, 
             IResumeAnalyze resumeAnalysisService, 
             IResumeRepository resumeRepository,
-            IAnalysisRepository analysisRepository)
+            IAnalysisRepository analysisRepository,
+            ISuggestionRepository suggestionRepository)
         {
             _resumeParserService = resumeParserService;
             _resumeAnalysisService = resumeAnalysisService;
             _resumeRepository = resumeRepository;
             _analysisRepository = analysisRepository;
+            _suggestionRepository = suggestionRepository;
         }
 
         //File Download Methods
@@ -33,6 +37,7 @@ namespace CVPilotAPI.ResumeService
             return fileBytes;
         }
 
+        //Resume Analysis Methods
         public async Task<ResumeAnalysisResponse> AnalysisFileAsync(int ResumeId)
         {
             var DbResume = await _resumeRepository.GetResumeByIdAsync(ResumeId);
@@ -61,6 +66,13 @@ namespace CVPilotAPI.ResumeService
                 Profession = result.Profession,
                 Experience = result.Experience,
                 Skills = result.Skills,
+            });
+
+            await _suggestionRepository.CreateSuggestionAsync(ResumeId, new Suggestion
+            {
+                AnalysisId = ResumeId,
+                Suggestions = result.Suggestions,
+                Problems = result.Problems
             });
 
             return result;

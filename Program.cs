@@ -3,6 +3,8 @@ using CVPilotAPI.ResumeService;
 using CVPilotAPI.ResumeAnalyze;
 using CVPilotAPI.TextExtractionEngine;
 using CVPilotAPI.AnalysisRepository;
+using CVPilotAPI.SuggestionRepository;
+using CVPilotAPI.SuggetionRepository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,7 @@ builder.Services.AddScoped<IResumeAnalyze, ResumeAnalyze>();
 builder.Services.AddScoped<IResumeParserService, TextExtracter>();
 
 // Register repositories
+builder.Services.AddScoped<ISuggestionRepository, SuggestionRepository>();
 builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
 builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
 builder.Services.AddScoped<IResumeServices, ResumeServices>();
