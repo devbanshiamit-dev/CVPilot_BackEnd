@@ -59,21 +59,32 @@ namespace CVPilotAPI.ResumeService
                 throw new InvalidOperationException("Failed to analyze the resume.");
             }
 
-            await _analysisRepository.CreateAnalysisAsync(ResumeId, new Analysis
+            int analysisId = await _analysisRepository.CreateAnalysisAsync(ResumeId, new Analysis
             {
                 ResumeId = ResumeId,
                 Score = result.Score,
                 Profession = result.Profession,
                 Experience = result.Experience,
-                Skills = result.Skills,
             });
 
-            await _suggestionRepository.CreateSuggestionAsync(ResumeId, new Suggestion
+            for(int i = 0; i < result.Skills.Count; i++)
             {
-                AnalysisId = ResumeId,
-                Suggestions = result.Suggestions,
-                Problems = result.Problems
-            });
+                await _analysisRepository.CreateSkillsAsync(new Skills
+                {
+                    ResumeId = ResumeId,
+                    Skill = result.Skills[i]
+                });
+            }
+
+            for(int i = 0; i < result.Suggestions.Count; i++)
+            {
+                await _suggestionRepository.CreateSuggestionAsync(analysisId, new Suggestions
+                {
+                    AnalysisId = analysisId,
+                    Suggestion = result.Suggestions[i],
+                    Problem = result.Problems[i]
+                });
+            }
 
             return result;
         }

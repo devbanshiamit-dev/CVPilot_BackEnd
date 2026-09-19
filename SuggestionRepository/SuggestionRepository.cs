@@ -13,7 +13,7 @@ namespace CVPilotAPI.SuggetionRepository
             _connectionString = config.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
         }
-        public async Task<int> CreateSuggestionAsync(int analysisId, Suggestion suggestion)
+        public async Task<int> CreateSuggestionAsync(int analysisId, Suggestions suggestion)
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -23,11 +23,11 @@ namespace CVPilotAPI.SuggetionRepository
             using var command = new SqlCommand(query, connection);
 
             command.Parameters.Add("@AnalysisId", SqlDbType.Int).Value = analysisId;
-            command.Parameters.Add("@Suggestion", SqlDbType.VarChar).Value = string.Join(",", suggestion.Suggestions);
-            command.Parameters.Add("@Problem", SqlDbType.VarChar).Value = string.Join(",", suggestion.Problems);
+            command.Parameters.Add("@Suggestion", SqlDbType.VarChar).Value = string.Join(",", suggestion.Suggestion);
+            command.Parameters.Add("@Problem", SqlDbType.VarChar).Value = string.Join(",", suggestion.Problem);
             return await command.ExecuteNonQueryAsync();
         }
-        public async Task<Suggestion> GetSuggestionByAnalysisIdAsync(int analysisId)
+        public async Task<Suggestions> GetSuggestionByAnalysisIdAsync(int analysisId)
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -41,17 +41,13 @@ namespace CVPilotAPI.SuggetionRepository
             }
             return null!;
         }
-        private Suggestion MapReaderToSuggestion(SqlDataReader reader)
+        private Suggestions MapReaderToSuggestion(SqlDataReader reader)
         {
-            var suggestion = new Suggestion
+            var suggestion = new Suggestions
             {
                 AnalysisId = reader.GetInt32(reader.GetOrdinal("AnalysisId")),
-                Suggestions = reader.IsDBNull(reader.GetOrdinal("Suggestions"))
-                    ? new List<string>()
-                    : reader.GetString(reader.GetOrdinal("Suggestions")).Split(',').ToList(),
-                Problems = reader.IsDBNull(reader.GetOrdinal("Problems"))
-                    ? new List<string>()
-                    : reader.GetString(reader.GetOrdinal("Problems")).Split(',').ToList()
+                Suggestion = reader.GetString(reader.GetOrdinal("Suggestion")),
+                Problem = reader.GetString(reader.GetOrdinal("Problem"))
             };
             return suggestion;
         }

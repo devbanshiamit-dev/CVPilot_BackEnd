@@ -4,7 +4,7 @@ namespace CVPilotAPI.SuggestionRepository
 {
     public interface ISuggestionRepository
     {
-        Task<int> CreateSuggestionAsync(int analysisId, Suggestion suggestion);
-        Task<Suggestion> GetSuggestionByAnalysisIdAsync(int analysisId);
+        Task<int> CreateSuggestionAsync(int analysisId, Suggestions suggestion);
+        Task<Suggestions> GetSuggestionByAnalysisIdAsync(int analysisId);
     }
 }

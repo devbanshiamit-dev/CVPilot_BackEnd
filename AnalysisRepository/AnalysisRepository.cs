@@ -34,9 +34,9 @@ namespace CVPilotAPI.AnalysisRepository
         public async Task<int> CreateAnalysisAsync(int resumeId, Analysis analysis)
         {
             const string sql = @"
-            INSERT INTO ResumeAnalysis (ResumeId, Score, Profession, Experience, Skills)
+            INSERT INTO ResumeAnalysis (ResumeId, Score, Profession, Experience)
             OUTPUT INSERTED.AnalysisId
-            VALUES (@ResumeId, @Score, @Profession, @Experience, @Skills);";
+            VALUES (@ResumeId, @Score, @Profession, @Experience);";
 
             await using var connection = new SqlConnection(_connectionString);
             await using var command = new SqlCommand(sql, connection);
@@ -45,10 +45,24 @@ namespace CVPilotAPI.AnalysisRepository
             command.Parameters.Add("@Score", SqlDbType.Int).Value = analysis.Score;
             command.Parameters.Add("@Profession", SqlDbType.VarChar,100).Value = analysis.Profession;
             command.Parameters.Add("@Experience", SqlDbType.VarChar,50).Value = analysis.Experience;
-            command.Parameters.Add("@Skills", SqlDbType.VarChar,-1).Value = string.Join(",", analysis.Skills);
 
             await connection.OpenAsync();
             return await command.ExecuteNonQueryAsync();
+        }
+        public async Task CreateSkillsAsync(Skills skills)
+        {
+            const string sql = @"
+            INSERT INTO Skills (ResumeId, Skill)
+            VALUES (@ResumeId, @Skill);";
+
+            await using var connection = new SqlConnection(_connectionString);
+            await using var command = new SqlCommand(sql, connection);
+
+            command.Parameters.Add("@ResumeId", SqlDbType.Int).Value = skills.ResumeId;
+            command.Parameters.Add("@Skill", SqlDbType.VarChar, 100).Value = skills.Skill;
+
+            await connection.OpenAsync();
+            await command.ExecuteNonQueryAsync();
         }
         private Analysis MapToAnalysis(SqlDataReader reader)
         {
@@ -57,8 +71,7 @@ namespace CVPilotAPI.AnalysisRepository
                 ResumeId = reader.GetInt32(reader.GetOrdinal("ResumeId")),
                 Score = reader.GetInt32(reader.GetOrdinal("Score")),
                 Profession = reader.GetString(reader.GetOrdinal("Profession")),
-                Experience = reader.GetString(reader.GetOrdinal("Experience")),
-                Skills = reader.GetString(reader.GetOrdinal("Skills")).Split(',').ToList(),
+                Experience = reader.GetString(reader.GetOrdinal("Experience"))
             };
         }
     }
