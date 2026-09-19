@@ -3,6 +3,22 @@
     "ContainingType": "CVPilotAPI.Controllers.ResumeController",
     "Method": "AnalyzeResume",
     "RelativePath": "api/Resume/analyze",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "resumeId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "CVPilotAPI.Controllers.ResumeController",
+    "Method": "UploadResume",
+    "RelativePath": "api/Resume/upload",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,

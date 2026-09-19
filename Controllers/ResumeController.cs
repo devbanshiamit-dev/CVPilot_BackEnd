@@ -1,6 +1,8 @@
-﻿using CVPilotAPI.ResumeAnalyze;
+﻿using CVPilotAPI.DTO;
+using CVPilotAPI.ResumeAnalyze;
 using CVPilotAPI.ResumeService;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace CVPilotAPI.Controllers
 {
@@ -14,11 +16,17 @@ namespace CVPilotAPI.Controllers
         {
             _resumeServices = resumeServices;
         }
-        [HttpPost("analyze")]
-        public async Task<IActionResult> AnalyzeResume(IFormFile file)
+        [HttpGet("analyze")]
+        public async Task<IActionResult> AnalyzeResume(int resumeId)
         {
-            var analysisResult = await _resumeServices.AnalysisFileAsync(file);
+            var analysisResult = await _resumeServices.AnalysisFileAsync(resumeId);
             return Ok(analysisResult);
+        }
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadResume(IFormFile file)
+        {
+            var resumeId = await _resumeServices.UploadResumeAsync(file);
+            return Ok(new { ResumeId = resumeId });
         }
     }
 }

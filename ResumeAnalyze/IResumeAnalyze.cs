@@ -4,6 +4,6 @@ namespace CVPilotAPI.ResumeAnalyze
 {
     public interface IResumeAnalyze
     {
-        Task<ResumeAnalysisResponse> AnalyzeResumeAsync(ResumeAnalysisRequest request);
+        Task<ResumeAnalysisResponse> AnalyzeResumeAsync(string extractedText);
     }
 }

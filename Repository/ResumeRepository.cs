@@ -1,5 +1,6 @@
 ﻿using CVPilotAPI.Models;
 using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace CVPilotAPI.Repository
 {
@@ -14,20 +15,20 @@ namespace CVPilotAPI.Repository
         }
 
         // ========== CREATE ==========
-        public async Task<int> CreateAsync(Resume resume)
+        public async Task<int> CreateResumeAsync(Resumes resume)
         {
             const string sql = @"
-            INSERT INTO Resume (FileName, FileType, FileUrl, ExtractedText)
+            INSERT INTO Resumes (FileName, FileType, FilePath, ExtractedText)
             OUTPUT INSERTED.ResumeId
-            VALUES (@FileName, @FileType, @FileUrl, @ExtractedText);";
+            VALUES (@FileName, @FileType, @FilePath, @ExtractedText);";
 
             await using var connection = new SqlConnection(_connectionString);
             await using var command = new SqlCommand(sql, connection);
 
-            command.Parameters.AddWithValue("@FileName", resume.FileName);
-            command.Parameters.AddWithValue("@FileType", resume.FileType);
-            command.Parameters.AddWithValue("@FileUrl", (object?)resume.FileUrl ?? DBNull.Value);
-            command.Parameters.AddWithValue("@ExtractedText", (object?)resume.ExtractedText ?? DBNull.Value);
+            command.Parameters.Add("@FileName", SqlDbType.VarChar,255).Value = resume.FileName;
+            command.Parameters.Add("@FileType", SqlDbType.VarChar,50).Value = resume.FileType;
+            command.Parameters.Add("@FilePath", SqlDbType.VarChar,500).Value = (object?)resume.FilePath ?? DBNull.Value;
+            command.Parameters.Add("@ExtractedText", SqlDbType.VarChar, -1).Value = (object?)resume.ExtractedText ?? DBNull.Value;
 
             await connection.OpenAsync();
             var result = await command.ExecuteScalarAsync();
@@ -35,11 +36,11 @@ namespace CVPilotAPI.Repository
         }
 
         // ========== READ BY ID ==========
-        public async Task<Resume?> GetByIdAsync(int resumeId)
+        public async Task<Resumes?> GetResumeByIdAsync(int resumeId)
         {
             const string sql = @"
-            SELECT ResumeId, FileName, FileType, FileUrl, ExtractedText, CreatedAt
-            FROM Resume
+            SELECT ResumeId, FileName, FileType, FilePath, ExtractedText, UploadedAt
+            FROM Resumes
             WHERE ResumeId = @ResumeId;";
 
             await using var connection = new SqlConnection(_connectionString);
@@ -58,14 +59,14 @@ namespace CVPilotAPI.Repository
         }
 
         // ========== READ ALL ==========
-        public async Task<IEnumerable<Resume>> GetAllAsync()
+        public async Task<IEnumerable<Resumes>> GetAllAsync()
         {
             const string sql = @"
-            SELECT ResumeId, FileName, FileType, FileUrl, ExtractedText, CreatedAt
-            FROM Resume
-            ORDER BY CreatedAt DESC;";
+            SELECT ResumeId, FileName, FileType, FilePath, ExtractedText, UploadedAt
+            FROM Resumes
+            ORDER BY UploadedAt DESC;";
 
-            var resumes = new List<Resume>();
+            var resumes = new List<Resumes>();
 
             await using var connection = new SqlConnection(_connectionString);
             await using var command = new SqlCommand(sql, connection);
@@ -82,13 +83,13 @@ namespace CVPilotAPI.Repository
         }
 
         // ========== UPDATE ==========
-        public async Task<bool> UpdateAsync(Resume resume)
+        public async Task<bool> UpdateAsync(Resumes resume)
         {
             const string sql = @"
-            UPDATE Resume
+            UPDATE Resumes
             SET FileName = @FileName,
                 FileType = @FileType,
-                FileUrl = @FileUrl,
+                FilePath = @FilePath,
                 ExtractedText = @ExtractedText
             WHERE ResumeId = @ResumeId;";
 
@@ -98,7 +99,7 @@ namespace CVPilotAPI.Repository
             command.Parameters.AddWithValue("@ResumeId", resume.ResumeId);
             command.Parameters.AddWithValue("@FileName", resume.FileName);
             command.Parameters.AddWithValue("@FileType", resume.FileType);
-            command.Parameters.AddWithValue("@FileUrl", (object?)resume.FileUrl ?? DBNull.Value);
+            command.Parameters.AddWithValue("@FilePath", (object?)resume.FilePath ?? DBNull.Value);
             command.Parameters.AddWithValue("@ExtractedText", (object?)resume.ExtractedText ?? DBNull.Value);
 
             await connection.OpenAsync();
@@ -109,7 +110,7 @@ namespace CVPilotAPI.Repository
         // ========== DELETE ==========
         public async Task<bool> DeleteAsync(int resumeId)
         {
-            const string sql = "DELETE FROM Resume WHERE ResumeId = @ResumeId;";
+            const string sql = "DELETE FROM Resumes WHERE ResumeId = @ResumeId;";
 
             await using var connection = new SqlConnection(_connectionString);
             await using var command = new SqlCommand(sql, connection);
@@ -121,20 +122,20 @@ namespace CVPilotAPI.Repository
         }
 
         // ========== Private Mapper ==========
-        private static Resume MapToResume(SqlDataReader reader)
+        private static Resumes MapToResume(SqlDataReader reader)
         {
-            return new Resume
+            return new Resumes
             {
                 ResumeId = reader.GetInt32(reader.GetOrdinal("ResumeId")),
                 FileName = reader.GetString(reader.GetOrdinal("FileName")),
                 FileType = reader.GetString(reader.GetOrdinal("FileType")),
-                FileUrl = reader.IsDBNull(reader.GetOrdinal("FileUrl"))
+                FilePath = reader.IsDBNull(reader.GetOrdinal("FilePath"))
                     ? null
-                    : reader.GetString(reader.GetOrdinal("FileUrl")),
+                    : reader.GetString(reader.GetOrdinal("FilePath")),
                 ExtractedText = reader.IsDBNull(reader.GetOrdinal("ExtractedText"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("ExtractedText")),
-                CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+                UploadedAt = reader.GetDateTime(reader.GetOrdinal("UploadedAt"))
             };
         }
     }

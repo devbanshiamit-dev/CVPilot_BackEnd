@@ -4,10 +4,10 @@ namespace CVPilotAPI.Repository
 {
     public interface IResumeRepository
     {
-        Task<int> CreateAsync(Resume resume);
-        Task<Resume?> GetByIdAsync(int resumeId);
-        Task<IEnumerable<Resume>> GetAllAsync();
-        Task<bool> UpdateAsync(Resume resume);
+        Task<int> CreateResumeAsync(Resumes resume);
+        Task<Resumes?> GetResumeByIdAsync(int resumeId);
+        Task<IEnumerable<Resumes>> GetAllAsync();
+        Task<bool> UpdateAsync(Resumes resume);
         Task<bool> DeleteAsync(int resumeId);
     }
 }
