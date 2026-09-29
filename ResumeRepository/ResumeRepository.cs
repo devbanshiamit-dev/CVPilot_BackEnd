@@ -58,30 +58,6 @@ namespace CVPilotAPI.Repository
             return null;
         }
 
-        // ========== READ ALL ==========
-        public async Task<IEnumerable<Resumes>> GetAllAsync()
-        {
-            const string sql = @"
-            SELECT ResumeId, FileName, FileType, FilePath, ExtractedText, UploadedAt
-            FROM Resumes
-            ORDER BY UploadedAt DESC;";
-
-            var resumes = new List<Resumes>();
-
-            await using var connection = new SqlConnection(_connectionString);
-            await using var command = new SqlCommand(sql, connection);
-
-            await connection.OpenAsync();
-            await using var reader = await command.ExecuteReaderAsync();
-
-            while (await reader.ReadAsync())
-            {
-                resumes.Add(MapToResume(reader));
-            }
-
-            return resumes;
-        }
-
         // ========== UPDATE ==========
         public async Task<bool> UpdateAsync(Resumes resume)
         {

@@ -29,12 +29,47 @@ namespace CVPilotAPI.ResumeService
             _suggestionRepository = suggestionRepository;
         }
 
-        //File Download Methods
-        public async Task<byte[]> DownloadResumeAsync(string fileName)
+        //file Upload Methods
+        public async Task<int> UploadResumeAsync(IFormFile file)
         {
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", fileName);
-            byte[] fileBytes = await File.ReadAllBytesAsync(path);
-            return fileBytes;
+            if (!IsValidFileType(file.FileName))
+            {
+                throw new ArgumentException(
+                    "Invalid file type. Only TXT, PDF, DOC, and DOCX files are allowed."
+                );
+            }
+
+            var filename = Guid.NewGuid().ToString() +
+                           Path.GetExtension(file.FileName);
+
+            var uploadFolder = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "Uploads"
+            );
+
+            if (!Directory.Exists(uploadFolder))
+            {
+                Directory.CreateDirectory(uploadFolder);
+            }
+
+            var path = Path.Combine(uploadFolder, filename);
+
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var extractedText = await ExtractTextAsync(path);
+
+            int resumeId = await _resumeRepository.CreateResumeAsync(new Resumes
+            {
+                FileName = filename,
+                FileType = Path.GetExtension(file.FileName).ToLowerInvariant(),
+                FilePath = path,
+                ExtractedText = extractedText
+            });
+
+            return resumeId;
         }
 
         //Resume Analysis Methods
@@ -81,55 +116,35 @@ namespace CVPilotAPI.ResumeService
                 await _suggestionRepository.CreateSuggestionAsync(analysisId, new Suggestions
                 {
                     AnalysisId = analysisId,
-                    Suggestion = result.Suggestions[i],
-                    Problem = result.Problems[i]
+                    Suggestion = result.Suggestions[i]
+                });
+            }
+
+            for (int i = 0; i < result.Problems.Count; i++)
+            {
+                await _suggestionRepository.CreateProblemAsync(analysisId, new Problem
+                {
+                    AnalysisId = analysisId,
+                    problem = result.Problems[i]
                 });
             }
 
             return result;
         }
-        //file Upload Methods
-        public async Task<int> UploadResumeAsync(IFormFile file)
+        //File Download Methods
+        public async Task<byte[]> DownloadResumeAsync(int Id)
         {
-            if (!IsValidFileType(file.FileName))
-            {
-                throw new ArgumentException(
-                    "Invalid file type. Only TXT, PDF, DOC, and DOCX files are allowed."
-                );
-            }
-
-            var filename = Guid.NewGuid().ToString() +
-                           Path.GetExtension(file.FileName);
-
-            var uploadFolder = Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "Uploads"
-            );
-
-            if (!Directory.Exists(uploadFolder))
-            {
-                Directory.CreateDirectory(uploadFolder);
-            }
-
-            var path = Path.Combine(uploadFolder, filename);
-
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var extractedText = await ExtractTextAsync(path);
-
-            int resumeId = await _resumeRepository.CreateResumeAsync(new Resumes
-            {
-                FileName = filename,
-                FileType = Path.GetExtension(file.FileName).ToLowerInvariant(),
-                FilePath = path,
-                ExtractedText = extractedText
-            });
-
-            return resumeId;
+            var resume = await _resumeRepository.GetResumeByIdAsync(Id);
+            if (resume == null)
+                throw new ArgumentException($"Resume with ID {Id} not found.");
+            
+            string path = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", resume.FileName);
+            byte[] fileBytes = await File.ReadAllBytesAsync(path);
+            return fileBytes;
         }
+
+
+        //====================Private Helper Methods====================
         //Text Extraction Methods
         private async Task<String> ExtractTextAsync(string fileName)
         {

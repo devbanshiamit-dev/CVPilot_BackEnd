@@ -1,10 +1,12 @@
-using CVPilotAPI.Repository;
-using CVPilotAPI.ResumeService;
-using CVPilotAPI.ResumeAnalyze;
-using CVPilotAPI.TextExtractionEngine;
 using CVPilotAPI.AnalysisRepository;
+using CVPilotAPI.Repository;
+using CVPilotAPI.ResumeAnalyze;
+using CVPilotAPI.ResumeService;
 using CVPilotAPI.SuggestionRepository;
 using CVPilotAPI.SuggetionRepository;
+using CVPilotAPI.TextExtractionEngine;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,29 @@ builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
 builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
 builder.Services.AddScoped<IResumeServices, ResumeServices>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ReactPolicy", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("FixedPolicy", config =>
+    {
+        config.PermitLimit = 30;
+        config.Window = TimeSpan.FromMinutes(1);
+        config.QueueLimit = 0;
+    });
+});
+
 
 var app = builder.Build();
 
@@ -34,6 +59,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("ReactPolicy");
+
+app.UseRateLimiter();
 
 app.UseAuthorization();
 

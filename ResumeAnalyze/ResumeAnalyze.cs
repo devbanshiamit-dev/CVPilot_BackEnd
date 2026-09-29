@@ -1,7 +1,6 @@
 ﻿using CVPilotAPI.DTO;
 using System.Text;
 using System.Text.Json;
-using System.Net.Http.Headers;
 
 namespace CVPilotAPI.ResumeAnalyze
 {
@@ -10,7 +9,9 @@ namespace CVPilotAPI.ResumeAnalyze
         private readonly HttpClient _httpClient;
         private readonly IConfiguration configuration;
 
-        public ResumeAnalyze(HttpClient httpClient, IConfiguration configuration)
+        public ResumeAnalyze(
+            HttpClient httpClient,
+            IConfiguration configuration)
         {
             _httpClient = httpClient;
             this.configuration = configuration;
@@ -18,52 +19,72 @@ namespace CVPilotAPI.ResumeAnalyze
 
         public async Task<ResumeAnalysisResponse> AnalyzeResumeAsync(string extractedText)
         {
-            var apiModel = configuration["OpenAI:ApiModel"];
-            var apiKey = configuration["OpenAI:ApiKey"];
+            Console.WriteLine(extractedText);
+            var apiModel = configuration["Gemini:ApiModel"];
+            var apiKey = configuration["Gemini:ApiKey"];
 
             if (string.IsNullOrWhiteSpace(apiModel))
-                throw new InvalidOperationException("OpenAI API model is missing.");
+                throw new InvalidOperationException("Gemini API model is missing.");
 
             if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("OpenAI API key is missing.");
+                throw new InvalidOperationException("Gemini API key is missing.");
 
             if (string.IsNullOrWhiteSpace(extractedText))
-                throw new ArgumentException("Resume text cannot be empty.", nameof(extractedText));
+                throw new ArgumentException(
+                    "Resume text cannot be empty.",
+                    nameof(extractedText));
 
-            const string url = "https://api.openai.com/v1/responses";
+            var url =
+                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
+
+            var prompt = """
+                You are a professional resume analysis assistant.
+
+                Analyze the following resume and return ONLY a valid JSON object
+                with this exact structure:
+
+                {
+                    "score": int,
+                    "profession": string,
+                    "experience": string,
+                    "skills": [string],
+                    "problems": [string],
+                    "suggestions": [string]
+                }
+
+                Rules:
+                    - score must be between 1 and 100.
+                    - Return only JSON.
+                    - Do not use markdown.
+                    - Do not use ```json.
+                    - Do not include any explanation outside the JSON.
+
+               Resume:
+               """ + extractedText;
 
             var requestBody = new
             {
-                model = apiModel,
-                input = new object[]
+                contents = new[]
                 {
-            new
-            {
-                role = "system",
-                content = """
-                    You are a professional resume analysis assistant.
-                    Analyze the provided resume text and return ONLY a valid JSON object with this exact structure:
+                    new
                     {
-                      "score": int,
-                      "profession": string,
-                      "experience": string,
-                      "skills": [string],
-                      "problems": [string],
-                      "suggestions": [string]
+                        parts = new[]
+                        {
+                            new
+                            {
+                                text = prompt
+                            }
+                        }
                     }
-                    Do not include any extra text, markdown, or explanation.
-                    """
-            },
-            new
-            {
-                role = "user",
-                content = extractedText
-            }
                 }
             };
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                url);
+
+            request.Headers.Add("x-goog-api-key", apiKey);
+
             request.Content = new StringContent(
                 JsonSerializer.Serialize(requestBody),
                 Encoding.UTF8,
@@ -71,53 +92,68 @@ namespace CVPilotAPI.ResumeAnalyze
 
             using var response = await _httpClient.SendAsync(request);
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent =
+                await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
                 throw new HttpRequestException(
-                    $"OpenAI API failed with status {(int)response.StatusCode}: {responseContent}");
+                    $"Gemini API failed with status {(int)response.StatusCode}: {responseContent}");
             }
 
-            // Extract the actual JSON text from OpenAI response
-            using var document = JsonDocument.Parse(responseContent);
+            using var document =
+                JsonDocument.Parse(responseContent);
 
-            if (!document.RootElement.TryGetProperty("output", out var output) ||
-                output.ValueKind != JsonValueKind.Array ||
-                output.GetArrayLength() < 2)
+            var root = document.RootElement;
+
+            if (!root.TryGetProperty("candidates", out var candidates) ||
+                candidates.ValueKind != JsonValueKind.Array ||
+                candidates.GetArrayLength() == 0)
             {
-                throw new InvalidOperationException("Unexpected response structure from OpenAI (missing output).");
+                throw new InvalidOperationException(
+                    "Unexpected response structure from Gemini (missing candidates).");
             }
 
-            var message = output[1];
+            var candidate = candidates[0];
 
-            if (!message.TryGetProperty("content", out var content) ||
-                content.ValueKind != JsonValueKind.Array ||
-                content.GetArrayLength() == 0)
+            if (!candidate.TryGetProperty("content", out var content) ||
+                !content.TryGetProperty("parts", out var parts) ||
+                parts.ValueKind != JsonValueKind.Array ||
+                parts.GetArrayLength() == 0)
             {
-                throw new InvalidOperationException("Unexpected response structure from OpenAI (missing content).");
+                throw new InvalidOperationException(
+                    "Unexpected response structure from Gemini (missing content).");
             }
 
-            if (!content[0].TryGetProperty("text", out var textElement))
+            if (!parts[0].TryGetProperty("text", out var textElement))
             {
-                throw new InvalidOperationException("Unexpected response structure from OpenAI (missing text).");
+                throw new InvalidOperationException(
+                    "Unexpected response structure from Gemini (missing text).");
             }
 
             var jsonText = textElement.GetString();
 
             if (string.IsNullOrWhiteSpace(jsonText))
-                throw new InvalidOperationException("OpenAI returned empty analysis text.");
+            {
+                throw new InvalidOperationException(
+                    "Gemini returned empty analysis text.");
+            }
 
-            // Deserialize the actual analysis JSON
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
 
-            var result = JsonSerializer.Deserialize<ResumeAnalysisResponse>(jsonText, options);
+            var result =
+                JsonSerializer.Deserialize<ResumeAnalysisResponse>(
+                    jsonText,
+                    options);
 
             if (result is null)
-                throw new InvalidOperationException("Failed to deserialize resume analysis response.");
+            {
+                throw new InvalidOperationException(
+                    "Failed to deserialize resume analysis response.");
+            }
 
             return result;
         }

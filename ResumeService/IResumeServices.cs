@@ -7,6 +7,6 @@ namespace CVPilotAPI.ResumeService
     {
         Task<ResumeAnalysisResponse> AnalysisFileAsync(int ResumeId);
         Task<int> UploadResumeAsync(IFormFile file);
-        Task<byte[]> DownloadResumeAsync(string fileName);
+        Task<byte[]> DownloadResumeAsync(int Id);
     }
 }
