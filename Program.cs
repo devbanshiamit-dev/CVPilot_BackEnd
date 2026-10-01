@@ -1,12 +1,13 @@
 using CVPilotAPI.AnalysisRepository;
+using CVPilotAPI.Middleware;
 using CVPilotAPI.Repository;
 using CVPilotAPI.ResumeAnalyze;
 using CVPilotAPI.ResumeService;
 using CVPilotAPI.SuggestionRepository;
 using CVPilotAPI.SuggetionRepository;
 using CVPilotAPI.TextExtractionEngine;
+using CVPilotAPI.Validate;
 using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,8 @@ builder.Services.AddScoped<ISuggestionRepository, SuggestionRepository>();
 builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
 builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
 builder.Services.AddScoped<IResumeServices, ResumeServices>();
+
+builder.Services.AddScoped<ValidateToken>();
 
 builder.Services.AddCors(options =>
 {
@@ -49,8 +52,9 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-
 var app = builder.Build();
+
+app.UseMiddleware<ValidationMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -63,6 +67,8 @@ app.UseHttpsRedirection();
 app.UseCors("ReactPolicy");
 
 app.UseRateLimiter();
+
+app.UseMiddleware<ValidationMiddleware>();
 
 app.UseAuthorization();
 

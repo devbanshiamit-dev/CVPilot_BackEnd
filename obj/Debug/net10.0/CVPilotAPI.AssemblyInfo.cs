@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CVPilotAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1b018d47e2d992908bd39722006eb86d077b14f4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00783f33392e365ac4590d8845fede55c4323e7a")]
 [assembly: System.Reflection.AssemblyProductAttribute("CVPilotAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CVPilotAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

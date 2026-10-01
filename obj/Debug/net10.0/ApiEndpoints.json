@@ -17,6 +17,16 @@
   },
   {
     "ContainingType": "CVPilotAPI.Controllers.ResumeController",
+    "Method": "Temp",
+    "RelativePath": "api/Resume/temp",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "CVPilotAPI.Controllers.ResumeController",
     "Method": "UploadResume",
     "RelativePath": "api/Resume/upload",
     "HttpMethod": "POST",

@@ -58,6 +58,18 @@
           }
         }
       }
+    },
+    "/api/Resume/temp": {
+      "get": {
+        "tags": [
+          "Resume"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": { },

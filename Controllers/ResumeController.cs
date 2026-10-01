@@ -32,5 +32,11 @@ namespace CVPilotAPI.Controllers
             var resumeId = await _resumeServices.UploadResumeAsync(file);
             return Ok(new { ResumeId = resumeId });
         }
+        [HttpGet("temp")]
+        public IActionResult Temp()
+        {
+            var Claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            return Ok(new { Message = "Temp endpoint is working.", Claims = Claims });
+        }
     }
 }
