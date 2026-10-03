@@ -12,21 +12,21 @@ namespace CVPilotAPI.Controllers
     [ApiController]
     public class ResumeController : ControllerBase
     {
-        private readonly IResumeServices _resumeServices;
+        private readonly IResumeService _resumeServices;
 
-        public ResumeController(IResumeServices resumeServices)
+        public ResumeController(IResumeService resumeServices)
         {
             _resumeServices = resumeServices;
         }
 
         [HttpGet("analyze")]
         [EnableRateLimiting("FixedPolicy")]
-        public async Task<IActionResult> AnalyzeResume([FromBody] UserAnalysis analysisRequest)
+        public async Task<IActionResult> AnalyzeResume(int resumeId)
         {
             var UserId = int.Parse(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value ?? "0");
 
             var analysisResult = 
-                await _resumeServices.AnalysisFileAsync(analysisRequest);
+                await _resumeServices.AnalysisFileAsync(UserId, resumeId);
 
             return Ok(analysisResult);
         }

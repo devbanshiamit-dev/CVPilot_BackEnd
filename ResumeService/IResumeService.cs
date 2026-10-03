@@ -4,10 +4,10 @@ using CVPilotAPI.ResumeAnalyze;
 
 namespace CVPilotAPI.ResumeService
 {
-    public interface IResumeServices
+    public interface IResumeService
     {
         Task<int> UploadResumeAsync(IFormFile file);
-        Task<ResumeAnalysisResponse> AnalysisFileAsync(UserAnalysis analysis);
+        Task<ResumeAnalysisResponse> AnalysisFileAsync(int UserId, int resumeId);
         Task<byte[]> DownloadResumeAsync(int resumeId);
     }
 }

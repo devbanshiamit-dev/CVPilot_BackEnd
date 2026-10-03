@@ -26,7 +26,7 @@ builder.Services.AddScoped<IResumeParserService, TextExtracter>();
 builder.Services.AddScoped<ISuggestionRepository, SuggestionRepository>();
 builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
 builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
-builder.Services.AddScoped<IResumeServices, ResumeServices>();
+builder.Services.AddScoped<IResumeService, ResumeService>();
 builder.Services.AddScoped<IUserAnalysisRepository, UserAnalysisRepository>();
 
 builder.Services.AddScoped<ValidateToken>();

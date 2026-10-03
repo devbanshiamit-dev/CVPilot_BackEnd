@@ -15,14 +15,12 @@ namespace CVPilotAPI.AnalysisControll
         public async Task<int> CreateUserAnalysisAsync(UserAnalysis analysis)
         {
             const string sql = @"
-            INSERT INTO UserAnalysis (ResumeId, UserId, AnalysisCount, WindowStartedAt)
-            OUTPUT INSERTED.Id
-            VALUES (@ResumeId, @UserId, @AnalysisCount, @WindowStartedAt);";
+            INSERT INTO UserAnalysis (UserId, AnalysisCount, WindowStartedAt)
+            VALUES (@UserId, @AnalysisCount, @WindowStartedAt);";
 
             await using var connection = new SqlConnection(_connectionString);
             await using var command = new SqlCommand(sql, connection);
 
-            command.Parameters.Add("@ResumeId", SqlDbType.Int).Value = analysis.ResumeId;
             command.Parameters.Add("@UserId", SqlDbType.Int).Value = analysis.UserId;
             command.Parameters.Add("@AnalysisCount", SqlDbType.Int).Value = analysis.AnalysisCount;
             command.Parameters.Add("@WindowStartedAt", SqlDbType.DateTime2).Value = analysis.WindowStartedAt;
@@ -32,10 +30,10 @@ namespace CVPilotAPI.AnalysisControll
 
             return Convert.ToInt32(result);
         }
-        public async Task<UserAnalysis?> GetUserAnalysisByIdAsync(int id)
+        public async Task<UserAnalysis?> GetUserAnalysisByUserIdAsync(int id)
         {
             const string sql = @"
-            SELECT ResumeId, UserId, AnalysisCount, WindowStartedAt
+            SELECT UserId, AnalysisCount, WindowStartedAt
             FROM UserAnalysis
             WHERE UserId = @UserId;";
             await using var connection = new SqlConnection(_connectionString);
@@ -67,7 +65,6 @@ namespace CVPilotAPI.AnalysisControll
         {
             return new UserAnalysis
             {
-                ResumeId = reader.GetInt32(reader.GetOrdinal("ResumeId")),
                 UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
                 AnalysisCount = reader.GetInt32(reader.GetOrdinal("AnalysisCount")),
                 WindowStartedAt = reader.GetDateTime(reader.GetOrdinal("WindowStartedAt"))

@@ -9,7 +9,7 @@ using CVPilotAPI.TextExtractionEngine;
 
 namespace CVPilotAPI.ResumeService
 {
-    public class ResumeServices : IResumeServices
+    public class ResumeService : IResumeService
     {
         private readonly IResumeParserService _resumeParserService;
         private readonly IResumeAnalyze _resumeAnalysisService;
@@ -18,7 +18,7 @@ namespace CVPilotAPI.ResumeService
         private readonly ISuggestionRepository _suggestionRepository;
         private readonly IUserAnalysisRepository _userAnalysisRepository;
 
-        public ResumeServices(
+        public ResumeService(
             IResumeParserService resumeParserService,
             IResumeAnalyze resumeAnalysisService,
             IResumeRepository resumeRepository,
@@ -56,11 +56,11 @@ namespace CVPilotAPI.ResumeService
 
         // ==================== Analysis ====================
 
-        public async Task<ResumeAnalysisResponse> AnalysisFileAsync(UserAnalysis analysis)
+        public async Task<ResumeAnalysisResponse> AnalysisFileAsync(int UserId, int resumeId)
         {
-            await EnsureAnalysisAllowedAsync(analysis.UserId);
+            await EnsureAnalysisAllowedAsync(UserId);
 
-            var resume = await GetResumeForAnalysisAsync(analysis.ResumeId);
+            var resume = await GetResumeForAnalysisAsync(resumeId);
 
             var result = await _resumeAnalysisService
                 .AnalyzeResumeAsync(resume.ExtractedText);
@@ -72,10 +72,10 @@ namespace CVPilotAPI.ResumeService
             }
 
             await SaveAnalysisResultAsync(
-                analysis.ResumeId,
+                resumeId,
                 result);
 
-            await IncrementAnalysisCountAsync(analysis.UserId);
+            await IncrementAnalysisCountAsync(UserId);
 
             return result;
         }
@@ -252,7 +252,7 @@ namespace CVPilotAPI.ResumeService
         {
             var userAnalysis =
                 await _userAnalysisRepository
-                    .GetUserAnalysisByIdAsync(userId);
+                    .GetUserAnalysisByUserIdAsync(userId);
 
             if (userAnalysis != null)
             {

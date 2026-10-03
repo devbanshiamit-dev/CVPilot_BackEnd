@@ -5,7 +5,7 @@ namespace CVPilotAPI.AnalysisControll
     public interface IUserAnalysisRepository
     {
         Task<int> CreateUserAnalysisAsync(UserAnalysis analysis);
-        Task<UserAnalysis?> GetUserAnalysisByIdAsync(int id);
+        Task<UserAnalysis?> GetUserAnalysisByUserIdAsync(int id);
         Task UpdateUserAnalysisAsync(UserAnalysis analysis);
     }
 }
