@@ -1,6 +1,6 @@
 ﻿namespace CVPilotAPI.DTO
 {
-    public class ResumeAnalysisRequest
+    public class AnalysisRequestForAI
     {
         public string ExtractedText { get; set; } = string.Empty;
     }

@@ -1,4 +1,5 @@
 ﻿using CVPilotAPI.DTO;
+using CVPilotAPI.Models;
 using CVPilotAPI.ResumeAnalyze;
 using CVPilotAPI.ResumeService;
 using Microsoft.AspNetCore.Mvc;
@@ -20,9 +21,13 @@ namespace CVPilotAPI.Controllers
 
         [HttpGet("analyze")]
         [EnableRateLimiting("FixedPolicy")]
-        public async Task<IActionResult> AnalyzeResume(int resumeId)
+        public async Task<IActionResult> AnalyzeResume([FromBody] UserAnalysis analysisRequest)
         {
-            var analysisResult = await _resumeServices.AnalysisFileAsync(resumeId);
+            var UserId = int.Parse(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value ?? "0");
+
+            var analysisResult = 
+                await _resumeServices.AnalysisFileAsync(analysisRequest);
+
             return Ok(analysisResult);
         }
         [HttpPost("upload")]

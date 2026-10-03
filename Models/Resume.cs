@@ -3,6 +3,7 @@
     public class Resumes
     {
         public int ResumeId { get; set; }
+        public int UserId { get; set; }
         public string FileName { get; set; } = string.Empty;
         public string FileType { get; set; } = string.Empty;
         public string? FilePath { get; set; }

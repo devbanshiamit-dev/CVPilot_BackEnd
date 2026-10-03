@@ -1,4 +1,5 @@
-﻿using CVPilotAPI.AnalysisRepository;
+﻿using CVPilotAPI.AnalysisControll;
+using CVPilotAPI.AnalysisRepository;
 using CVPilotAPI.DTO;
 using CVPilotAPI.Models;
 using CVPilotAPI.Repository;
@@ -15,161 +16,297 @@ namespace CVPilotAPI.ResumeService
         private readonly IResumeRepository _resumeRepository;
         private readonly IAnalysisRepository _analysisRepository;
         private readonly ISuggestionRepository _suggestionRepository;
+        private readonly IUserAnalysisRepository _userAnalysisRepository;
+
         public ResumeServices(
-            IResumeParserService resumeParserService, 
-            IResumeAnalyze resumeAnalysisService, 
+            IResumeParserService resumeParserService,
+            IResumeAnalyze resumeAnalysisService,
             IResumeRepository resumeRepository,
             IAnalysisRepository analysisRepository,
-            ISuggestionRepository suggestionRepository)
+            ISuggestionRepository suggestionRepository,
+            IUserAnalysisRepository userAnalysisRepository)
         {
             _resumeParserService = resumeParserService;
             _resumeAnalysisService = resumeAnalysisService;
             _resumeRepository = resumeRepository;
             _analysisRepository = analysisRepository;
             _suggestionRepository = suggestionRepository;
+            _userAnalysisRepository = userAnalysisRepository;
         }
 
-        //file Upload Methods
+        // ==================== Upload ====================
+
         public async Task<int> UploadResumeAsync(IFormFile file)
         {
-            if (!IsValidFileType(file.FileName))
+            ValidateFileType(file.FileName);
+
+            var filePath = await SaveUploadedFileAsync(file);
+            var extractedText = await ExtractTextAsync(filePath);
+
+            var resume = new Resumes
             {
-                throw new ArgumentException(
-                    "Invalid file type. Only TXT, PDF, DOC, and DOCX files are allowed."
-                );
-            }
-
-            var filename = Guid.NewGuid().ToString() +
-                           Path.GetExtension(file.FileName);
-
-            var uploadFolder = Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "Uploads"
-            );
-
-            if (!Directory.Exists(uploadFolder))
-            {
-                Directory.CreateDirectory(uploadFolder);
-            }
-
-            var path = Path.Combine(uploadFolder, filename);
-
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var extractedText = await ExtractTextAsync(path);
-
-            int resumeId = await _resumeRepository.CreateResumeAsync(new Resumes
-            {
-                FileName = filename,
+                FileName = Path.GetFileName(filePath),
                 FileType = Path.GetExtension(file.FileName).ToLowerInvariant(),
-                FilePath = path,
+                FilePath = filePath,
                 ExtractedText = extractedText
-            });
+            };
 
-            return resumeId;
+            return await _resumeRepository.CreateResumeAsync(resume);
         }
 
-        //Resume Analysis Methods
-        public async Task<ResumeAnalysisResponse> AnalysisFileAsync(int ResumeId)
+        // ==================== Analysis ====================
+
+        public async Task<ResumeAnalysisResponse> AnalysisFileAsync(UserAnalysis analysis)
         {
-            var DbResume = await _resumeRepository.GetResumeByIdAsync(ResumeId);
+            await EnsureAnalysisAllowedAsync(analysis.UserId);
 
-            if (DbResume == null)
-            {
-                throw new ArgumentException($"Resume with ID {ResumeId} not found.");
-            }
+            var resume = await GetResumeForAnalysisAsync(analysis.ResumeId);
 
-            if (string.IsNullOrEmpty(DbResume.ExtractedText))
-            {
-                throw new InvalidOperationException("Extracted text is null or empty.");
-            }
-
-            var result = await _resumeAnalysisService.AnalyzeResumeAsync(DbResume.ExtractedText);
+            var result = await _resumeAnalysisService
+                .AnalyzeResumeAsync(resume.ExtractedText);
 
             if (result == null)
             {
-                throw new InvalidOperationException("Failed to analyze the resume.");
+                throw new InvalidOperationException(
+                    "Failed to analyze the resume.");
             }
 
-            int analysisId = await _analysisRepository.CreateAnalysisAsync(ResumeId, new Analysis
-            {
-                ResumeId = ResumeId,
-                Score = result.Score,
-                Profession = result.Profession,
-                Experience = result.Experience,
-            });
+            await SaveAnalysisResultAsync(
+                analysis.ResumeId,
+                result);
 
-            for(int i = 0; i < result.Skills.Count; i++)
-            {
-                await _analysisRepository.CreateSkillsAsync(new Skills
-                {
-                    ResumeId = ResumeId,
-                    Skill = result.Skills[i]
-                });
-            }
-
-            for(int i = 0; i < result.Suggestions.Count; i++)
-            {
-                await _suggestionRepository.CreateSuggestionAsync(analysisId, new Suggestions
-                {
-                    AnalysisId = analysisId,
-                    Suggestion = result.Suggestions[i]
-                });
-            }
-
-            for (int i = 0; i < result.Problems.Count; i++)
-            {
-                await _suggestionRepository.CreateProblemAsync(analysisId, new Problem
-                {
-                    AnalysisId = analysisId,
-                    problem = result.Problems[i]
-                });
-            }
+            await IncrementAnalysisCountAsync(analysis.UserId);
 
             return result;
         }
-        //File Download Methods
-        public async Task<byte[]> DownloadResumeAsync(int Id)
+
+        // ==================== Download ====================
+
+        public async Task<byte[]> DownloadResumeAsync(int resumeId)
         {
-            var resume = await _resumeRepository.GetResumeByIdAsync(Id);
+            var resume = await _resumeRepository.GetResumeByIdAsync(resumeId);
+
             if (resume == null)
-                throw new ArgumentException($"Resume with ID {Id} not found.");
-            
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", resume.FileName);
-            byte[] fileBytes = await File.ReadAllBytesAsync(path);
-            return fileBytes;
-        }
-
-
-        //====================Private Helper Methods====================
-        //Text Extraction Methods
-        private async Task<String> ExtractTextAsync(string fileName)
-        {
-            var path = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", fileName);
-
-            if (!IsValidFileType(fileName))
             {
-                throw new ArgumentException("Invalid file type, only PDF, DOC, and DOCX files are allowed");
+                throw new ArgumentException(
+                    $"Resume with ID {resumeId} not found.");
             }
 
-            var resumeText = await _resumeParserService.ExtractTextFromFileAsync(path);
+            return await File.ReadAllBytesAsync(resume.FilePath);
+        }
 
-            if (string.IsNullOrWhiteSpace(resumeText))
+        // ==================== File Helpers ====================
+
+        private void ValidateFileType(string fileName)
+        {
+            string[] allowedExtensions =
             {
-                throw new InvalidOperationException("Failed to extract text from the resume.");
+                ".pdf",
+                ".doc",
+                ".docx",
+                ".txt"
+            };
+
+            var extension = Path.GetExtension(fileName)
+                .ToLowerInvariant();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                throw new ArgumentException(
+                    "Invalid file type. Only TXT, PDF, DOC, and DOCX files are allowed.");
+            }
+        }
+
+        private async Task<string> SaveUploadedFileAsync(IFormFile file)
+        {
+            var uploadFolder = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "Uploads");
+
+            Directory.CreateDirectory(uploadFolder);
+
+            var fileName =
+                $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+
+            var filePath = Path.Combine(
+                uploadFolder,
+                fileName);
+
+            await using var stream =
+                new FileStream(filePath, FileMode.Create);
+
+            await file.CopyToAsync(stream);
+
+            return filePath;
+        }
+
+        private async Task<string> ExtractTextAsync(string filePath)
+        {
+            var extractedText =
+                await _resumeParserService
+                    .ExtractTextFromFileAsync(filePath);
+
+            if (string.IsNullOrWhiteSpace(extractedText))
+            {
+                throw new InvalidOperationException(
+                    "Failed to extract text from the resume.");
             }
 
-            return resumeText;
+            return extractedText;
         }
-        //File Type Validation Method
-        private bool IsValidFileType(string fileName)
+
+        // ==================== Resume Helpers ====================
+
+        private async Task<Resumes> GetResumeForAnalysisAsync(int resumeId)
         {
-            string[] allowedExtensions = { ".pdf", ".doc", ".docx", ".txt" };
-            string fileExtension = Path.GetExtension(fileName).ToLower();
-            return allowedExtensions.Contains(fileExtension);
+            var resume =
+                await _resumeRepository.GetResumeByIdAsync(resumeId);
+
+            if (resume == null)
+            {
+                throw new ArgumentException(
+                    $"Resume with ID {resumeId} not found.");
+            }
+
+            if (string.IsNullOrWhiteSpace(resume.ExtractedText))
+            {
+                throw new InvalidOperationException(
+                    "Extracted text is null or empty.");
+            }
+
+            return resume;
+        }
+
+        // ==================== Analysis Save ====================
+
+        private async Task SaveAnalysisResultAsync(
+            int resumeId,
+            ResumeAnalysisResponse result)
+        {
+            var analysisId =
+                await _analysisRepository.CreateAnalysisAsync(
+                    resumeId,
+                    new Analysis
+                    {
+                        ResumeId = resumeId,
+                        Score = result.Score,
+                        Profession = result.Profession,
+                        Experience = result.Experience
+                    });
+
+            await SaveSkillsAsync(resumeId, result.Skills);
+            await SaveSuggestionsAsync(analysisId, result.Suggestions);
+            await SaveProblemsAsync(analysisId, result.Problems);
+        }
+
+        private async Task SaveSkillsAsync(
+            int resumeId,
+            List<string> skills)
+        {
+            foreach (var skill in skills)
+            {
+                await _analysisRepository.CreateSkillsAsync(
+                    new Skills
+                    {
+                        ResumeId = resumeId,
+                        Skill = skill
+                    });
+            }
+        }
+
+        private async Task SaveSuggestionsAsync(
+            int analysisId,
+            List<string> suggestions)
+        {
+            foreach (var suggestion in suggestions)
+            {
+                await _suggestionRepository.CreateSuggestionAsync(
+                    analysisId,
+                    new Suggestions
+                    {
+                        AnalysisId = analysisId,
+                        Suggestion = suggestion
+                    });
+            }
+        }
+
+        private async Task SaveProblemsAsync(
+            int analysisId,
+            List<string> problems)
+        {
+            foreach (var problem in problems)
+            {
+                await _suggestionRepository.CreateProblemAsync(
+                    analysisId,
+                    new Problem
+                    {
+                        AnalysisId = analysisId,
+                        problem = problem
+                    });
+            }
+        }
+
+        // ==================== Analysis Limit ====================
+
+        private async Task<UserAnalysis> GetUserAnalysisAsync(int userId)
+        {
+            var userAnalysis =
+                await _userAnalysisRepository
+                    .GetUserAnalysisByIdAsync(userId);
+
+            if (userAnalysis != null)
+            {
+                return userAnalysis;
+            }
+
+            userAnalysis = new UserAnalysis
+            {
+                UserId = userId,
+                AnalysisCount = 0,
+                WindowStartedAt = DateTime.UtcNow
+            };
+
+            await _userAnalysisRepository
+                .CreateUserAnalysisAsync(userAnalysis);
+
+            return userAnalysis;
+        }
+
+        private async Task EnsureAnalysisAllowedAsync(int userId)
+        {
+            var userAnalysis =
+                await GetUserAnalysisAsync(userId);
+
+            var now = DateTime.UtcNow;
+
+            if (now - userAnalysis.WindowStartedAt
+                >= TimeSpan.FromHours(24))
+            {
+                userAnalysis.AnalysisCount = 0;
+                userAnalysis.WindowStartedAt = now;
+
+                await _userAnalysisRepository
+                    .UpdateUserAnalysisAsync(userAnalysis);
+
+                return;
+            }
+
+            if (userAnalysis.AnalysisCount >= 2)
+            {
+                throw new InvalidOperationException(
+                    "You have reached the maximum number of analyses. Please try again after 24 hours.");
+            }
+        }
+
+        private async Task IncrementAnalysisCountAsync(int userId)
+        {
+            var userAnalysis =
+                await GetUserAnalysisAsync(userId);
+
+            userAnalysis.AnalysisCount++;
+
+            await _userAnalysisRepository
+                .UpdateUserAnalysisAsync(userAnalysis);
         }
     }
 }

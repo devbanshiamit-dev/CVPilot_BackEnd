@@ -1,3 +1,4 @@
+using CVPilotAPI.AnalysisControll;
 using CVPilotAPI.AnalysisRepository;
 using CVPilotAPI.Middleware;
 using CVPilotAPI.Repository;
@@ -26,6 +27,7 @@ builder.Services.AddScoped<ISuggestionRepository, SuggestionRepository>();
 builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
 builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
 builder.Services.AddScoped<IResumeServices, ResumeServices>();
+builder.Services.AddScoped<IUserAnalysisRepository, UserAnalysisRepository>();
 
 builder.Services.AddScoped<ValidateToken>();
 
